@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Team Task Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: #2a2a3d;
+      --accent: #7c5cfc;
+      --accent2: #fc5c7d;
+      --green: #22d3a0;
+      --yellow: #f9c74f;
+      --red: #ef4444;
+      --text: #e8e8f0;
+      --muted: #6b6b8a;
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    h1,h2,h3,h4 { font-family: 'Syne', sans-serif; }
+
+    /* LAYOUT */
+    .app { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px; background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 24px 0; position: fixed;
+      top: 0; left: 0; height: 100vh; z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 0 20px 24px; border-bottom: 1px solid var(--border);
+      font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800;
+      color: var(--accent); letter-spacing: -0.5px;
+    }
+    .sidebar-logo span { color: var(--text); }
+    .nav-section { padding: 16px 12px 8px; }
+    .nav-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); padding: 0 8px 8px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+      cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted);
+      transition: all 0.15s; border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(124,92,252,0.15); color: var(--accent); }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-user {
+      margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center; font-size: 12px;
+      font-weight: 700; color: white; font-family: 'Syne', sans-serif; flex-shrink: 0;
+    }
+    .avatar-lg { width: 48px; height: 48px; font-size: 18px; }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 13px; font-weight: 600; truncate: ellipsis; white-space: nowrap; overflow: hidden; }
+    .user-role { font-size: 11px; color: var(--muted); }
+    .logout-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px; }
+    .logout-btn:hover { color: var(--accent2); }
+
+    /* MAIN CONTENT */
+    .main { margin-left: 240px; flex: 1; padding: 32px; min-height: 100vh; }
+    .page-header { margin-bottom: 32px; }
+    .page-title { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .page-sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+    /* CARDS */
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card-sm { padding: 16px; }
+
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .stat-card.purple::before { background: var(--accent); }
+    .stat-card.pink::before { background: var(--accent2); }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.yellow::before { background: var(--yellow); }
+    .stat-num { font-size: 32px; font-weight: 800; font-family: 'Syne', sans-serif; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;
+      border: none; transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #6a4ae0; transform: translateY(-1px); }
+    .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    /* FORMS */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .form-input {
+      width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.15s; outline: none;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--muted); }
+    select.form-input { cursor: pointer; }
+    textarea.form-input { resize: vertical; min-height: 80px; }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    /* TASKS */
+    .task-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .task-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .task-col-header {
+      padding: 14px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; border-bottom: 1px solid var(--border); display: flex;
+      align-items: center; justify-content: space-between;
+    }
+    .task-col-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 200px; }
+    .task-card {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px; cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent;
+    }
+    .task-card:hover { border-color: var(--border); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .task-card.urgent { border-left-color: var(--red); }
+    .task-card.high { border-left-color: var(--yellow); }
+    .task-card.medium { border-left-color: var(--accent); }
+    .task-card.low { border-left-color: var(--green); }
+    .task-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .task-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 100px;
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .badge-todo { background: rgba(107,107,138,0.2); color: var(--muted); }
+    .badge-in_progress { background: rgba(124,92,252,0.2); color: var(--accent); }
+    .badge-review { background: rgba(249,199,79,0.2); color: var(--yellow); }
+    .badge-done { background: rgba(34,211,160,0.2); color: var(--green); }
+    .badge-urgent { background: rgba(239,68,68,0.2); color: var(--red); }
+    .badge-high { background: rgba(249,199,79,0.2); color: var(--yellow); }
+    .badge-medium { background: rgba(124,92,252,0.2); color: var(--accent); }
+    .badge-low { background: rgba(34,211,160,0.2); color: var(--green); }
+
+    /* PROJECTS */
+    .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .project-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+    }
+    .project-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .project-card::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2)); transform: scaleX(0);
+      transition: transform 0.2s;
+    }
+    .project-card:hover::after { transform: scaleX(1); }
+    .project-name { font-size: 16px; font-weight: 700; margin-bottom: 8px; font-family: 'Syne', sans-serif; }
+    .project-desc { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+    .project-stats { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+    .project-stat { display: flex; align-items: center; gap: 4px; }
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 12px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 2px; transition: width 0.3s; }
+
+    /* AUTH PAGES */
+    .auth-page {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--bg); padding: 20px;
+    }
+    .auth-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+      padding: 40px; width: 100%; max-width: 420px;
+    }
+    .auth-logo { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: var(--accent); margin-bottom: 8px; }
+    .auth-tagline { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+    .auth-switch { text-align: center; margin-top: 24px; font-size: 14px; color: var(--muted); }
+    .auth-switch a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 500; }
+
+    /* MISC */
+    .flex { display: flex; }
+    .flex-center { display: flex; align-items: center; }
+    .flex-between { display: flex; align-items: center; justify-content: space-between; }
+    .gap-2 { gap: 8px; }
+    .gap-3 { gap: 12px; }
+    .mb-4 { margin-bottom: 16px; }
+    .mb-6 { margin-bottom: 24px; }
+    .text-muted { color: var(--muted); }
+    .text-sm { font-size: 13px; }
+    .text-xs { font-size: 11px; }
+    .overdue { color: var(--red) !important; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .spinner {
+      width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.6s linear infinite; margin: 40px auto;
+    }
+    .error-msg { color: var(--red); font-size: 13px; margin-top: 8px; padding: 8px 12px; background: rgba(239,68,68,0.1); border-radius: 6px; }
+    .col-todo { border-top: 2px solid var(--muted); }
+    .col-in_progress { border-top: 2px solid var(--accent); }
+    .col-review { border-top: 2px solid var(--yellow); }
+    .col-done { border-top: 2px solid var(--green); }
+    .count-badge {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 100px;
+      padding: 1px 7px; font-size: 11px; color: var(--muted);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.3s ease; }
+
+    /* OVERDUE BANNER */
+    .overdue-banner {
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;
+    }
+    .overdue-title { font-weight: 600; color: var(--red); font-size: 13px; margin-bottom: 8px; }
+
+    /* TASK LIST */
+    .task-list { display: flex; flex-direction: column; gap: 8px; }
+    .task-list-item {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .task-list-item:hover { border-color: var(--accent); }
+    .task-list-item .task-info { flex: 1; }
+    .due-date { font-size: 11px; color: var(--muted); }
+    .due-date.overdue { color: var(--red); }
+
+    /* MEMBERS LIST */
+    .member-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .member-item:last-child { border-bottom: none; }
+
+    /* Responsive */
+    @media (max-width: 1200px) { .task-board { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main { margin-left: 0; padding: 16px; }
+      .task-board { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useContext, createContext, useCallback } = React;
+
+// ─── API CLIENT ───────────────────────────────────────────────────────────────
+const BASE_URL = 'http://localhost:5000/api';
+const api = axios.create({ baseURL: BASE_URL });
+api.interceptors.request.use(cfg => {
+  const t = localStorage.getItem('token');
+  if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  return cfg;
+});
+api.interceptors.response.use(r => r, err => {
+  if (err.response?.status === 401) {
+    localStorage.clear();
+    window.location.reload();
+  }
+  return Promise.reject(err);
+});
+
+const authAPI = {
+  signup: d => api.post('/auth/signup', d),
+  login: d => api.post('/auth/login', d),
+  me: () => api.get('/auth/me'),
+  users: () => api.get('/auth/users'),
+};
+const projectAPI = {
+  all: () => api.get('/projects'),
+  one: id => api.get(`/projects/${id}`),
+  create: d => api.post('/projects', d),
+  update: (id, d) => api.put(`/projects/${id}`, d),
+  delete: id => api.delete(`/projects/${id}`),
+  addMember: (pid, d) => api.post(`/projects/${pid}/members`, d),
+  removeMember: (pid, uid) => api.delete(`/projects/${pid}/members/${uid}`),
+};
+const taskAPI = {
+  dashboard: () => api.get('/tasks/dashboard'),
+  byProject: (pid, f) => api.get(`/tasks/project/${pid}`, { params: f }),
+  create: d => api.post('/tasks', d),
+  update: (id, d) => api.put(`/tasks/${id}`, d),
+  delete: id => api.delete(`/tasks/${id}`),
+};
+
+// ─── AUTH CONTEXT ─────────────────────────────────────────────────────────────
+const AuthCtx = createContext(null);
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const u = localStorage.getItem('user');
+    if (u) setUser(JSON.parse(u));
+    if (localStorage.getItem('token')) {
+      authAPI.me().then(r => { setUser(r.data.user); localStorage.setItem('user', JSON.stringify(r.data.user)); })
+        .catch(() => { localStorage.clear(); setUser(null); })
+        .finally(() => setLoading(false));
+    } else setLoading(false);
+  }, []);
+
+  const login = async (email, password) => {
+    const r = await authAPI.login({ email, password });
+    localStorage.setItem('token', r.data.token);
+    localStorage.setItem('user', JSON.stringify(r.data.user));
+    setUser(r.data.user);
+    return r.data.user;
+  };
+  const signup = async (d) => {
+    const r = await authAPI.signup(d);
+    localStorage.setItem('token', r.data.token);
+    localStorage.setItem('user', JSON.stringify(r.data.user));
+    setUser(r.data.user);
+    return r.data.user;
+  };
+  const logout = () => { localStorage.clear(); setUser(null); };
+
+  return <AuthCtx.Provider value={{ user, loading, login, signup, logout }}>{children}</AuthCtx.Provider>;
+}
+const useAuth = () => useContext(AuthCtx);
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const initials = name => name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+const isOverdue = d => d && new Date(d) < new Date() ? true : false;
+
+// ─── COMPONENTS ───────────────────────────────────────────────────────────────
+function Spinner() { return <div className="spinner" />; }
+
+function Modal({ title, onClose, children, footer }) {
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal fade-in">
+        <div className="flex-between mb-4">
+          <h3 className="modal-title" style={{marginBottom:0}}>{title}</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+        {children}
+        {footer && <div className="modal-footer">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function Badge({ type, label }) {
+  return <span className={`badge badge-${type}`}>{label || type.replace('_', ' ')}</span>;
+}
+
+// ─── AUTH PAGES ───────────────────────────────────────────────────────────────
+function LoginPage({ onSwitch }) {
+  const { login } = useAuth();
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async e => {
+    e.preventDefault(); setError(''); setLoading(true);
+    try { await login(form.email, form.password); }
+    catch (err) { setError(err.response?.data?.error || 'Login failed'); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card fade-in">
+        <div className="auth-logo">Task<span style={{color:'var(--text)'}}>Flow</span></div>
+        <p className="auth-tagline">Sign in to manage your team projects</p>
+        <form onSubmit={submit}>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" placeholder="you@company.com" required
+              value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" placeholder="••••••••" required
+              value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+          </div>
+          {error && <div className="error-msg">{error}</div>}
+          <button className="btn btn-primary" style={{width:'100%',marginTop:16,justifyContent:'center'}} type="submit" disabled={loading}>
+            {loading ? 'Signing in…' : 'Sign In'}
+          </button>
+        </form>
+        <div style={{marginTop:16,padding:'12px',background:'var(--surface2)',borderRadius:8,fontSize:12,color:'var(--muted)'}}>
+          <strong style={{color:'var(--text)'}}>Demo:</strong> Sign up first with any email. Use role "admin" for full access.
+        </div>
+        <p className="auth-switch">No account? <a onClick={onSwitch}>Sign up free</a></p>
+      </div>
+    </div>
+  );
+}
+
+function SignupPage({ onSwitch }) {
+  const { signup } = useAuth();
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'member' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async e => {
+    e.preventDefault(); setError(''); setLoading(true);
+    try { await signup(form); }
+    catch (err) { setError(err.response?.data?.error || err.response?.data?.errors?.[0]?.msg || 'Signup failed'); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card fade-in">
+        <div className="auth-logo">Task<span style={{color:'var(--text)'}}>Flow</span></div>
+        <p className="auth-tagline">Create your account to get started</p>
+        <form onSubmit={submit}>
+          <div className="form-group">
+            <label className="form-label">Full Name</label>
+            <input className="form-input" placeholder="Jane Smith" required
+              value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" placeholder="you@company.com" required
+              value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" placeholder="Min. 6 characters" required
+              value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Role</label>
+            <select className="form-input" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          {error && <div className="error-msg">{error}</div>}
+          <button className="btn btn-primary" style={{width:'100%',marginTop:16,justifyContent:'center'}} type="submit" disabled={loading}>
+            {loading ? 'Creating account…' : 'Create Account'}
+          </button>
+        </form>
+        <p className="auth-switch">Have an account? <a onClick={onSwitch}>Sign in</a></p>
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard({ onNavigate }) {
+  const { user } = useAuth();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    taskAPI.dashboard().then(r => setData(r.data)).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Spinner />;
+  const { stats, myTasks, overdueTasks, projectCount } = data || {};
+
+  return (
+    <div className="fade-in">
+      <div className="page-header">
+        <h1 className="page-title">Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {user?.name?.split(' ')[0]} 👋</h1>
+        <p className="page-sub">Here's what's happening with your tasks today</p>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card purple">
+          <div className="stat-num">{stats?.total || 0}</div>
+          <div className="stat-label">Total Tasks</div>
+        </div>
+        <div className="stat-card pink">
+          <div className="stat-num">{stats?.in_progress || 0}</div>
+          <div className="stat-label">In Progress</div>
+        </div>
+        <div className="stat-card green">
+          <div className="stat-num">{stats?.done || 0}</div>
+          <div className="stat-label">Completed</div>
+        </div>
+        <div className="stat-card yellow">
+          <div className="stat-num">{projectCount || 0}</div>
+          <div className="stat-label">Projects</div>
+        </div>
+      </div>
+
+      {overdueTasks?.length > 0 && (
+        <div className="overdue-banner mb-6">
+          <div className="overdue-title">⚠️ {overdueTasks.length} Overdue Task{overdueTasks.length > 1 ? 's' : ''}</div>
+          <div className="task-list">
+            {overdueTasks.slice(0,3).map(t => (
+              <div key={t.id} className="flex-between" style={{fontSize:13}}>
+                <span>{t.title}</span>
+                <span className="overdue text-xs">{fmtDate(t.due_date)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:20}}>
+        <div className="card">
+          <div className="flex-between mb-4">
+            <h3 style={{fontSize:15, fontWeight:700}}>My Recent Tasks</h3>
+            <Badge type={`todo`} label={`${stats?.todo || 0} to-do`} />
+          </div>
+          {myTasks?.length === 0 ? (
+            <div className="empty-state" style={{padding:'24px 0'}}>
+              <div>No tasks assigned yet</div>
+            </div>
+          ) : (
+            <div className="task-list">
+              {myTasks?.slice(0,6).map(t => (
+                <div key={t.id} className="task-list-item">
+                  <div className={`badge badge-${t.priority}`} style={{width:6,height:6,padding:0,borderRadius:'50%'}} />
+                  <div className="task-info">
+                    <div style={{fontSize:13,fontWeight:500}}>{t.title}</div>
+                    <div className="text-xs text-muted">{t.project_name}</div>
+                  </div>
+                  <div>
+                    <Badge type={t.status} />
+                    {t.due_date && <div className={`due-date ${isOverdue(t.due_date) && t.status !== 'done' ? 'overdue' : ''}`} style={{textAlign:'right',marginTop:2}}>{fmtDate(t.due_date)}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <h3 style={{fontSize:15, fontWeight:700, marginBottom:16}}>Task Status Breakdown</h3>
+          {['todo','in_progress','review','done'].map(s => {
+            const count = stats?.[s] || 0;
+            const total = stats?.total || 1;
+            const pct = Math.round((count / total) * 100);
+            const colors = {todo:'var(--muted)',in_progress:'var(--accent)',review:'var(--yellow)',done:'var(--green)'};
+            return (
+              <div key={s} style={{marginBottom:14}}>
+                <div className="flex-between" style={{fontSize:13, marginBottom:5}}>
+                  <span style={{textTransform:'capitalize'}}>{s.replace('_',' ')}</span>
+                  <span className="text-muted">{count} tasks</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{width:`${pct}%`, background:colors[s]}} />
+                </div>
+              </div>
+            );
+          })}
+          <button className="btn btn-primary btn-sm" style={{marginTop:16}} onClick={() => onNavigate('projects')}>
+            View Projects →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PROJECTS LIST ────────────────────────────────────────────────────────────
+function ProjectsPage({ onOpen }) {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ name: '', description: '' });
+  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+
+  const load = () => projectAPI.all().then(r => setProjects(r.data.projects)).finally(() => setLoading(false));
+  useEffect(() => { load(); }, []);
+
+  const create = async e => {
+    e.preventDefault(); setSaving(true);
+    try { await projectAPI.create(form); setShowModal(false); setForm({name:'',description:''}); load(); }
+    catch(err) { alert(err.response?.data?.error || 'Failed'); }
+    finally { setSaving(false); }
+  };
+
+  const del = async (e, id) => {
+    e.stopPropagation();
+    if (!confirm('Delete this project and all tasks?')) return;
+    await projectAPI.delete(id); load();
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div className="fade-in">
+      <div className="flex-between mb-6">
+        <div className="page-header" style={{marginBottom:0}}>
+          <h1 className="page-title">Projects</h1>
+          <p className="page-sub">{projects.length} project{projects.length !== 1 ? 's' : ''} total</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ New Project</button>
+      </div>
+
+      {projects.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">📁</div>
+          <h3 style={{marginBottom:8}}>No projects yet</h3>
+          <p>Create your first project to start managing tasks</p>
+          <button className="btn btn-primary" style={{marginTop:16}} onClick={() => setShowModal(true)}>Create Project</button>
+        </div>
+      ) : (
+        <div className="projects-grid">
+          {projects.map(p => {
+            const pct = p.task_count > 0 ? Math.round((p.done_count / p.task_count) * 100) : 0;
+            return (
+              <div key={p.id} className="project-card" onClick={() => onOpen(p.id)}>
+                <div className="flex-between" style={{marginBottom:10}}>
+                  <Badge type={p.status === 'active' ? 'in_progress' : p.status === 'completed' ? 'done' : 'todo'} label={p.status} />
+                  {(p.owner_id === user?.id || user?.role === 'admin') && (
+                    <button className="btn btn-danger btn-sm" onClick={e => del(e, p.id)}>✕</button>
+                  )}
+                </div>
+                <div className="project-name">{p.name}</div>
+                <div className="project-desc">{p.description || 'No description'}</div>
+                <div className="project-stats">
+                  <span className="project-stat">📋 {p.task_count} tasks</span>
+                  <span className="project-stat">👥 {p.member_count} members</span>
+                  <span className="project-stat">✅ {p.done_count} done</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{width:`${pct}%`}} />
+                </div>
+                <div className="text-xs text-muted" style={{marginTop:6}}>{pct}% complete</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showModal && (
+        <Modal title="New Project" onClose={() => setShowModal(false)} footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={create} disabled={saving}>{saving ? 'Creating…' : 'Create Project'}</button>
+          </>
+        }>
+          <form onSubmit={create}>
+            <div className="form-group">
+              <label className="form-label">Project Name *</label>
+              <input className="form-input" placeholder="e.g. Marketing Campaign" required
+                value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Description</label>
+              <textarea className="form-input" placeholder="What's this project about?"
+                value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+            </div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── PROJECT DETAIL ───────────────────────────────────────────────────────────
+function ProjectDetail({ projectId, onBack }) {
+  const { user } = useAuth();
+  const [project, setProject] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [editTask, setEditTask] = useState(null);
+  const [taskForm, setTaskForm] = useState({ title:'', description:'', assigned_to:'', status:'todo', priority:'medium', due_date:'' });
+  const [memberForm, setMemberForm] = useState({ user_id: '', role: 'member' });
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('board');
+
+  const load = async () => {
+    try {
+      const [proj, ts, us] = await Promise.all([
+        projectAPI.one(projectId),
+        taskAPI.byProject(projectId),
+        authAPI.users()
+      ]);
+      setProject(proj.data.project);
+      setMembers(proj.data.members);
+      setTasks(ts.data.tasks);
+      setAllUsers(us.data.users);
+    } catch(e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, [projectId]);
+
+  const openCreateTask = () => { setEditTask(null); setTaskForm({title:'',description:'',assigned_to:'',status:'todo',priority:'medium',due_date:''}); setShowTaskModal(true); };
+  const openEditTask = t => { setEditTask(t); setTaskForm({title:t.title,description:t.description||'',assigned_to:t.assigned_to||'',status:t.status,priority:t.priority,due_date:t.due_date ? t.due_date.slice(0,10) : ''}); setShowTaskModal(true); };
+
+  const saveTask = async e => {
+    e.preventDefault(); setSaving(true);
+    try {
+      const payload = { ...taskForm, project_id: projectId, assigned_to: taskForm.assigned_to || null, due_date: taskForm.due_date || null };
+      if (editTask) await taskAPI.update(editTask.id, payload);
+      else await taskAPI.create(payload);
+      setShowTaskModal(false); load();
+    } catch(err) { alert(err.response?.data?.error || 'Failed'); }
+    finally { setSaving(false); }
+  };
+
+  const delTask = async id => {
+    if (!confirm('Delete this task?')) return;
+    await taskAPI.delete(id); load();
+  };
+
+  const quickStatus = async (task, newStatus) => {
+    await taskAPI.update(task.id, { status: newStatus });
+    setTasks(prev => prev.map(t => t.id === task.id ? {...t, status: newStatus} : t));
+  };
+
+  const addMember = async e => {
+    e.preventDefault(); setSaving(true);
+    try { await projectAPI.addMember(projectId, memberForm); setShowMemberModal(false); load(); }
+    catch(err) { alert(err.response?.data?.error || 'Failed'); }
+    finally { setSaving(false); }
+  };
+
+  const removeMember = async uid => {
+    if (!confirm('Remove this member?')) return;
+    await projectAPI.removeMember(projectId, uid); load();
+  };
+
+  if (loading) return <Spinner />;
+  if (!project) return <div className="error-msg">Project not found</div>;
+
+  const cols = ['todo','in_progress','review','done'];
+  const colLabels = { todo:'To Do', in_progress:'In Progress', review:'In Review', done:'Done' };
+  const isOwner = project.owner_id === user?.id || user?.role === 'admin';
+  const memberIds = members.map(m => m.id);
+  const addableUsers = allUsers.filter(u => !memberIds.includes(u.id));
+
+  return (
+    <div className="fade-in">
+      <div className="flex-center gap-2 mb-4">
+        <button className="btn btn-ghost btn-sm" onClick={onBack}>← Back</button>
+        <span className="text-muted">/</span>
+        <span style={{fontSize:14, fontWeight:600}}>{project.name}</span>
+      </div>
+
+      <div className="flex-between mb-6">
+        <div>
+          <h1 className="page-title">{project.name}</h1>
+          <p className="page-sub">{project.description || 'No description'}</p>
+        </div>
+        <div className="flex gap-2">
+          {isOwner && <button className="btn btn-ghost" onClick={() => setShowMemberModal(true)}>👥 Manage Members</button>}
+          <button className="btn btn-primary" onClick={openCreateTask}>+ Add Task</button>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        {['board','list','members'].map(tab => (
+          <button key={tab} className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+            onClick={() => setActiveTab(tab)} style={{textTransform:'capitalize'}}>{tab}</button>
+        ))}
+      </div>
+
+      {activeTab === 'board' && (
+        <div className="task-board">
+          {cols.map(col => {
+            const colTasks = tasks.filter(t => t.status === col);
+            return (
+              <div key={col} className={`task-col col-${col}`}>
+                <div className="task-col-header">
+                  <span>{colLabels[col]}</span>
+                  <span className="count-badge">{colTasks.length}</span>
+                </div>
+                <div className="task-col-body">
+                  {colTasks.map(t => (
+                    <div key={t.id} className={`task-card ${t.priority}`} onClick={() => openEditTask(t)}>
+                      <div className="task-title">{t.title}</div>
+                      {t.description && <div className="text-xs text-muted" style={{marginBottom:8,lineHeight:1.4}}>{t.description.slice(0,60)}{t.description.length > 60 ? '…' : ''}</div>}
+                      <div className="task-meta">
+                        <Badge type={t.priority} />
+                        {t.assignee_name && <span className="text-xs text-muted">→ {t.assignee_name.split(' ')[0]}</span>}
+                      </div>
+                      {t.due_date && <div className={`due-date ${isOverdue(t.due_date) && t.status !== 'done' ? 'overdue' : ''}`} style={{marginTop:6}}>📅 {fmtDate(t.due_date)}</div>}
+                      <div className="flex gap-2" style={{marginTop:8}} onClick={e => e.stopPropagation()}>
+                        {cols.filter(c => c !== col).slice(0,2).map(c => (
+                          <button key={c} className="btn btn-ghost btn-sm" style={{fontSize:10,padding:'2px 6px'}}
+                            onClick={() => quickStatus(t, c)}>{colLabels[c]}</button>
+                        ))}
+                        {isOwner && <button className="btn btn-danger btn-sm" style={{marginLeft:'auto',fontSize:10,padding:'2px 6px'}} onClick={() => delTask(t.id)}>✕</button>}
+                      </div>
+                    </div>
+                  ))}
+                  {colTasks.length === 0 && <div className="text-xs text-muted" style={{textAlign:'center',padding:'20px 0'}}>No tasks</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {activeTab === 'list' && (
+        <div className="card">
+          {tasks.length === 0 ? (
+            <div className="empty-state"><div className="empty-icon">✅</div><p>No tasks yet. Add one!</p></div>
+          ) : (
+            <div className="task-list">
+              {tasks.map(t => (
+                <div key={t.id} className="task-list-item" onClick={() => openEditTask(t)}>
+                  <div className={`badge badge-${t.priority}`} style={{width:8,height:8,padding:0,borderRadius:'50%'}} />
+                  <div className="task-info">
+                    <div style={{fontSize:14,fontWeight:500}}>{t.title}</div>
+                    <div className="text-xs text-muted">{t.assignee_name ? `Assigned to ${t.assignee_name}` : 'Unassigned'}</div>
+                  </div>
+                  <div className="flex-center gap-2">
+                    <Badge type={t.status} />
+                    <Badge type={t.priority} />
+                    {t.due_date && <span className={`due-date ${isOverdue(t.due_date) && t.status !== 'done' ? 'overdue' : ''}`}>{fmtDate(t.due_date)}</span>}
+                    {isOwner && <button className="btn btn-danger btn-sm" onClick={e=>{e.stopPropagation();delTask(t.id)}}>✕</button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'members' && (
+        <div className="card">
+          <div className="flex-between mb-4">
+            <h3 style={{fontSize:15,fontWeight:700}}>Team Members ({members.length})</h3>
+            {isOwner && <button className="btn btn-primary btn-sm" onClick={() => setShowMemberModal(true)}>+ Add Member</button>}
+          </div>
+          {members.map(m => (
+            <div key={m.id} className="member-item">
+              <div className="avatar">{initials(m.name)}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:600}}>{m.name}</div>
+                <div className="text-xs text-muted">{m.email}</div>
+              </div>
+              <Badge type={m.role === 'admin' ? 'in_progress' : 'todo'} label={m.role} />
+              {isOwner && m.id !== user?.id && (
+                <button className="btn btn-danger btn-sm" style={{marginLeft:8}} onClick={() => removeMember(m.id)}>Remove</button>
+              )}
+            </div>
+          ))}
+          {members.length === 0 && <div className="text-muted text-sm">No members yet</div>}
+        </div>
+      )}
+
+      {/* Task Modal */}
+      {showTaskModal && (
+        <Modal title={editTask ? 'Edit Task' : 'New Task'} onClose={() => setShowTaskModal(false)} footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setShowTaskModal(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={saveTask} disabled={saving}>{saving ? 'Saving…' : editTask ? 'Save Changes' : 'Create Task'}</button>
+          </>
+        }>
+          <form onSubmit={saveTask}>
+            <div className="form-group">
+              <label className="form-label">Title *</label>
+              <input className="form-input" placeholder="Task title" required
+                value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Description</label>
+              <textarea className="form-input" placeholder="Details about this task…"
+                value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} />
+            </div>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select className="form-input" value={taskForm.status} onChange={e => setTaskForm({...taskForm, status: e.target.value})}>
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="review">In Review</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Priority</label>
+                <select className="form-input" value={taskForm.priority} onChange={e => setTaskForm({...taskForm, priority: e.target.value})}>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
+              <div className="form-group">
+                <label className="form-label">Assign To</label>
+                <select className="form-input" value={taskForm.assigned_to} onChange={e => setTaskForm({...taskForm, assigned_to: e.target.value})}>
+                  <option value="">Unassigned</option>
+                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Due Date</label>
+                <input className="form-input" type="date"
+                  value={taskForm.due_date} onChange={e => setTaskForm({...taskForm, due_date: e.target.value})} />
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Member Modal */}
+      {showMemberModal && (
+        <Modal title="Add Team Member" onClose={() => setShowMemberModal(false)} footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setShowMemberModal(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={addMember} disabled={saving}>{saving ? 'Adding…' : 'Add Member'}</button>
+          </>
+        }>
+          <form onSubmit={addMember}>
+            <div className="form-group">
+              <label className="form-label">Select User</label>
+              <select className="form-input" required value={memberForm.user_id}
+                onChange={e => setMemberForm({...memberForm, user_id: e.target.value})}>
+                <option value="">Choose a user…</option>
+                {addableUsers.map(u => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Role in Project</label>
+              <select className="form-input" value={memberForm.role}
+                onChange={e => setMemberForm({...memberForm, role: e.target.value})}>
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            {addableUsers.length === 0 && <div className="text-muted text-sm">All registered users are already members.</div>}
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── MY TASKS PAGE ────────────────────────────────────────────────────────────
+function MyTasksPage() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    taskAPI.dashboard().then(r => setData(r.data)).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Spinner />;
+  const tasks = data?.myTasks || [];
+  const filtered = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
+
+  return (
+    <div className="fade-in">
+      <div className="page-header">
+        <h1 className="page-title">My Tasks</h1>
+        <p className="page-sub">{tasks.length} tasks assigned to you</p>
+      </div>
+      <div className="flex gap-2 mb-4">
+        {['all','todo','in_progress','review','done'].map(f => (
+          <button key={f} className={`btn ${filter === f ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+            onClick={() => setFilter(f)} style={{textTransform:'capitalize'}}>
+            {f === 'all' ? 'All' : f.replace('_',' ')}
+          </button>
+        ))}
+      </div>
+      <div className="card">
+        {filtered.length === 0 ? (
+          <div className="empty-state"><div className="empty-icon">🎉</div><p>No tasks here!</p></div>
+        ) : (
+          <div className="task-list">
+            {filtered.map(t => (
+              <div key={t.id} className="task-list-item">
+                <div className="flex-center gap-2" style={{flex:1}}>
+                  <div className={`badge badge-${t.priority}`} style={{width:8,height:8,padding:0,borderRadius:'50%'}} />
+                  <div>
+                    <div style={{fontSize:14,fontWeight:500}}>{t.title}</div>
+                    <div className="text-xs text-muted">📁 {t.project_name}</div>
+                  </div>
+                </div>
+                <div className="flex-center gap-2">
+                  <Badge type={t.status} />
+                  <Badge type={t.priority} />
+                  {t.due_date && <span className={`due-date ${isOverdue(t.due_date) && t.status !== 'done' ? 'overdue' : ''}`}>📅 {fmtDate(t.due_date)}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SIDEBAR + APP SHELL ──────────────────────────────────────────────────────
+function AppShell() {
+  const { user, logout } = useAuth();
+  const [page, setPage] = useState('dashboard');
+  const [openProjectId, setOpenProjectId] = useState(null);
+
+  const nav = [
+    { id: 'dashboard', label: 'Dashboard', icon: '⬛' },
+    { id: 'projects', label: 'Projects', icon: '📁' },
+    { id: 'mytasks', label: 'My Tasks', icon: '✅' },
+  ];
+
+  const openProject = id => { setOpenProjectId(id); setPage('project'); };
+
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="sidebar-logo">Task<span>Flow</span></div>
+        <div className="nav-section">
+          <div className="nav-label">Navigation</div>
+          {nav.map(n => (
+            <button key={n.id} className={`nav-item ${page === n.id || (n.id === 'projects' && page === 'project') ? 'active' : ''}`}
+              onClick={() => { setPage(n.id); if (n.id !== 'projects') setOpenProjectId(null); }}>
+              <span className="icon">{n.icon}</span>{n.label}
+            </button>
+          ))}
+        </div>
+        <div className="nav-section" style={{marginTop:'auto',paddingBottom:0}}>
+          <div className="nav-label">Role</div>
+          <div style={{padding:'8px 12px'}}>
+            <Badge type={user?.role === 'admin' ? 'in_progress' : 'todo'} label={user?.role} />
+          </div>
+        </div>
+        <div className="sidebar-user">
+          <div className="avatar">{initials(user?.name)}</div>
+          <div className="user-info">
+            <div className="user-name">{user?.name}</div>
+            <div className="user-role">{user?.email}</div>
+          </div>
+          <button className="logout-btn" onClick={logout} title="Logout">⏻</button>
+        </div>
+      </aside>
+
+      <main className="main">
+        {page === 'dashboard' && <Dashboard onNavigate={setPage} />}
+        {page === 'projects' && <ProjectsPage onOpen={openProject} />}
+        {page === 'project' && openProjectId && <ProjectDetail projectId={openProjectId} onBack={() => setPage('projects')} />}
+        {page === 'mytasks' && <MyTasksPage />}
+      </main>
+    </div>
+  );
+}
+
+// ─── ROOT APP ─────────────────────────────────────────────────────────────────
+function App() {
+  const { user, loading } = useAuth();
+  const [authMode, setAuthMode] = useState('login');
+
+  if (loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',flexDirection:'column',gap:16}}>
+      <div style={{fontFamily:'Syne,sans-serif',fontSize:24,fontWeight:800,color:'var(--accent)'}}>TaskFlow</div>
+      <Spinner />
+    </div>
+  );
+
+  if (!user) {
+    return authMode === 'login'
+      ? <LoginPage onSwitch={() => setAuthMode('signup')} />
+      : <SignupPage onSwitch={() => setAuthMode('login')} />;
+  }
+
+  return <AppShell />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <AuthProvider><App /></AuthProvider>
+);
+</script>
+</body>
+</html>
